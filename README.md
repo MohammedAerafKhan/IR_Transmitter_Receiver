@@ -8,6 +8,7 @@ Code for an infrared Communication device
 4. LED display for presenting the received message
 5. Red and green LED (Status Indicator 'optional')
 6. SD Card for storing received and sent messages
+7. Button to start the transmission.
 
 
 ### Libraries Required:
