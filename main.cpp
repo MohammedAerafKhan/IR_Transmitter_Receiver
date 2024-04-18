@@ -69,7 +69,11 @@ BlockDevice *bd = BlockDevice::get_default_instance();
 
 
 // ===================== Transmitter Functions =====================
-
+/**
+ * @brief Sends a single bit via IR LED.
+ * 
+ * @param bit The bit value to send (true for 1, false for 0).
+ */
 void sendBit(bool bit) {
     irLed = 0.5f; // LED on
     wait_us(bit ? BIT_ONE_DURATION_US : BIT_ZERO_DURATION_US); // 6 ms for '1', 3 ms for '0'
@@ -77,12 +81,20 @@ void sendBit(bool bit) {
     wait_us(BIT_END_PAUSE_US); // Wait 1 ms before sending the next bit
 }
 
+/**
+ * @brief Sends a byte via IR LED.
+ * 
+ * @param byte The byte (8 bits) to send.
+ */
 void sendByte(uint8_t byte) {
     for (int i = 0; i < 8; ++i) {
         sendBit(byte & (1 << i));
     }
 }
 
+/**
+ * @brief Sends a start bit to indicate the beginning of a transmission.
+ */
 void sendStartBit() {
     irLed = 0.5f; // LED on
     wait_us(START_BIT_DURATION_US); // 6 ms for '1', 3 ms for '0'
@@ -90,6 +102,9 @@ void sendStartBit() {
     wait_us(BIT_END_PAUSE_US); // Wait 1 ms before sending the next bit
 }
 
+/**
+ * @brief Sends a stop bit to indicate the end of a transmission.
+ */
 void sendStopBit() {
     irLed = 0.5f; // LED on
     wait_us(STOP_BIT_DURATION_US); // 6 ms for '1', 3 ms for '0'
@@ -97,6 +112,11 @@ void sendStopBit() {
     wait_us(BIT_END_PAUSE_US); // Wait 1 ms before sending the next bit
 }
 
+/**
+ * @brief Sends a string via IR, byte by byte.
+ * 
+ * @param str The string to transmit.
+ */
 void sendString(const std::string& str) {
     int count = 0; // Counter for characters sent
     sendStartBit();
@@ -116,6 +136,11 @@ void sendString(const std::string& str) {
 
 // ===================== Receiver Functions =====================
 
+/**
+ * @brief Processes a received bit and stores it in a buffer.
+ * 
+ * @param bit The bit received.
+ */
 void processBit(bool bit) {
     if (bitIndex < 8) {
         bitBuffer[bitIndex++] = bit;
@@ -140,24 +165,52 @@ void processBit(bool bit) {
     }
 }
 
+/**
+ * @brief Checks if the received pulse width corresponds to a start bit.
+ * 
+ * @param pulseWidth The width of the pulse received.
+ * @return true if it's a start bit, false otherwise.
+ */
 bool isStartBit(int pulseWidth) {
     return pulseWidth > START_BIT_MIN_WIDTH_US && pulseWidth < START_BIT_MAX_WIDTH_US;
 }
 
+/**
+ * @brief Checks if the received pulse width corresponds to a stop bit.
+ * 
+ * @param pulseWidth The width of the pulse received.
+ * @return true if it's a stop bit, false otherwise.
+ */
 bool isStopBit(int pulseWidth) {
     return pulseWidth > STOP_BIT_MIN_WIDTH_US && pulseWidth < STOP_BIT_MAX_WIDTH_US;
 }
 
+/**
+ * @brief Checks if the received pulse width corresponds to a data bit.
+ * 
+ * @param pulseWidth The width of the pulse received.
+ * @return true if it's a data bit, false otherwise.
+ */
 bool isDataBit(int pulseWidth) {
     return (pulseWidth > DATA_BIT_ZERO_MIN_WIDTH_US && pulseWidth < DATA_BIT_ZERO_MAX_WIDTH_US) ||
            (pulseWidth > DATA_BIT_ONE_MIN_WIDTH_US && pulseWidth < DATA_BIT_ONE_MAX_WIDTH_US);
 }
 
+/**
+ * @brief Determines the value of the data bit based on its pulse width.
+ * 
+ * @param pulseWidth The width of the pulse received.
+ * @return true if the bit is 1, false if the bit is 0.
+ */
 bool determineBitValue(int pulseWidth) {
     return pulseWidth > DATA_BIT_ONE_MIN_WIDTH_US && pulseWidth < DATA_BIT_ONE_MAX_WIDTH_US;
 }
 
-
+/**
+ * @brief Handles edge detection in received signals and processes bits accordingly.
+ * 
+ * @param currentEdgeTime The timestamp of the current detected edge.
+ */
 void commonEdgeHandler(int currentEdgeTime) {
     if (lastEdgeTime != 0) {
         int pulseWidth = currentEdgeTime - lastEdgeTime;
@@ -177,16 +230,27 @@ void commonEdgeHandler(int currentEdgeTime) {
     lastEdgeTime = currentEdgeTime;
 }
 
+/**
+ * @brief Interrupt handler for rising edges.
+ */
 void riseHandler() {
     commonEdgeHandler(timer.read_us());
 }
 
+/**
+ * @brief Interrupt handler for falling edges.
+ */
 void fallHandler() {
     commonEdgeHandler(timer.read_us());
 }
 
 // ===================== Keypad Matrix Functions =====================
 
+/**
+ * @brief Gets the pressed numbers from the keypad until the '#' key is pressed.
+ * 
+ * @return A string of numbers collected from keypad inputs.
+ */
 std::string getPressedNumbers() {
     std::string numbers = "";
     char key;
@@ -209,6 +273,12 @@ std::string getPressedNumbers() {
     }
 }
 
+/**
+ * @brief Converts a string of numbers to words based on the telephone keypad mapping.
+ * 
+ * @param numbers The string of numbers to convert.
+ * @return A string representing the converted words.
+ */
 std::string convertToWords(const std::string& numbers) {
     std::map<char, std::string> num_to_char = {
         {'1', "1"},
@@ -246,11 +316,17 @@ std::string convertToWords(const std::string& numbers) {
 
 // ===================== Status Indicator Functions =====================
 
+/**
+ * @brief Sets the system status to "Ready".
+ */
 void setStatusReady() {
     statusReady = 1;
     statusBusy = 0;
 }
 
+/**
+ * @brief Sets the system status to "Busy".
+ */
 void setStatusBusy() {
     statusReady = 0;
     statusBusy = 1;
@@ -258,6 +334,9 @@ void setStatusBusy() {
 
 // ===================== Side Task Function =====================
 
+/**
+ * @brief Prints the pulse widths stored in the buffer to the terminal.
+ */
 void printdatatoTerminal() {
     for (int i = 0; i < pulseWidthIndex; i++) {
         printf("%d\n", pulseWidths[i]);
@@ -266,6 +345,11 @@ void printdatatoTerminal() {
 
 // ===================== LCD display Function =====================
 
+/**
+ * @brief Displays the received data on the LCD.
+ * 
+ * @param message The message to display.
+ */
 void displayReceivedData(const char* message) {
     lcd.cls();
     lcd.printf("%s", message);
@@ -273,6 +357,11 @@ void displayReceivedData(const char* message) {
 
 // ===================== SD Card Function =====================
 
+/**
+ * @brief Saves the received data to an SD card.
+ * 
+ * @param data The data to save.
+ */
 void saveToSDCard(const char* data) {
     if (data == NULL) {
         return;
